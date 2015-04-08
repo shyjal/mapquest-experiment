@@ -1,0 +1,137 @@
+<html>
+
+<head>
+    <style type="text/css">
+        #triplist {
+            margin: 20px 15px;
+            padding: 5px;
+            overflow-y: auto;
+            background-color: #fff;
+            width: 100px;
+            height: 90%;
+            border-radius: 10px;
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            width: 250px;
+            z-index: 1;
+            -webkit-box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.1);
+            -moz-box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+    <script src="http://open.mapquestapi.com/sdk/js/v7.2.s/mqa.toolkit.js?key=Fmjtd%7Cluu82q6t21%2C8a%3Do5-94tldz"></script>
+
+    <script type="text/javascript">
+        window.filterSkip = 50;
+        window.animSpeed = 100;
+
+        function trip_map() {
+
+
+            this.init = function() {
+                var options = {
+                    elt: document.getElementById('map_canavas'),
+                    zoom: 10,
+                    latLng: {
+                        lat: 39.334041,
+                        lng: -76.6679
+                    },
+                    zoomOnDoubleClick: true
+                };
+
+                // construct an instance of MQA.TileMap with the options object
+                window.map = new MQA.TileMap(options);
+
+                map.panNorth(-20);
+
+            }
+
+            this.init();
+
+        };
+
+        trip_map.addpoi = function() {
+            var basic = new MQA.Poi({
+                lat: 39.1216,
+                lng: -76.9498
+            });
+
+            var icon = new MQA.Icon('event.png', 32, 32);
+            basic.setIcon(icon);
+
+            basic.setInfoContentHTML('<div style="border-radius:10%;color:#fff;background-color:red;width:100%;position:relative;"><h2>Speeding</h2></div>Time: 11:22 PM');
+            map.addShape(basic);
+        };
+
+        trip_map.startdraw = function() {
+
+            var currentlocation = -1;
+
+            MQA.withModule('shapes', function() {
+
+                var last = sampledata.tripResponse.locationUpdate.length - 1;
+                var collection = new MQA.ShapeCollection();
+                var startPoi = new MQA.Poi({
+                    lat: sampledata.tripResponse.locationUpdate[0].lat,
+                    lng: sampledata.tripResponse.locationUpdate[0].lng
+                });
+
+
+                var startIcon = new MQA.Icon('starticon.png', 32, 32);
+                startPoi.setIcon(startIcon);
+                collection.add(startPoi);
+                var endPoi = new MQA.Poi({
+                    lat: sampledata.tripResponse.locationUpdate[last].lat,
+                    lng: sampledata.tripResponse.locationUpdate[last].lng
+                });
+                var endIcon = new MQA.Icon('endicon.png', 32, 32);
+                endPoi.setIcon(endIcon);
+                collection.add(endPoi);
+
+                window.DrawInterval = setInterval(function() {
+                    trip_map.drawnext(currentlocation += filterSkip, collection, last)
+                }, animSpeed);
+
+
+                map.zoomToRect(collection.getBoundingRect());
+
+                map.addShapeCollection(collection);
+            });
+
+        };
+
+        trip_map.drawnext = function(locationIndex, collection, lastIndex) {
+
+            console.log('s')
+            if (locationIndex > lastIndex) {
+                clearInterval(DrawInterval);
+            } else {
+                var line = new MQA.LineOverlay();
+                line.setShapePoints([sampledata.tripResponse.locationUpdate[locationIndex].lat, sampledata.tripResponse.locationUpdate[locationIndex].lng, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lat, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lng]);
+                collection.add(line);
+            }
+
+        };
+
+
+
+        MQA.EventUtil.observe(window, 'load', trip_map);
+    </script>
+    <script src="mq_depends.js"></script>
+</head>
+
+<body>
+    <div id='map_canavas' style='width:100%; height:100%;'></div>
+    <div id="triplist">
+        <button onclick="trip_map.startdraw()">add line</button>
+        <button onclick="trip_map.addpoi()">add poi</button>
+
+    </div>
+
+    <script src="sample_data.js"></script>
+
+</body>
+
+</html>
