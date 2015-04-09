@@ -24,8 +24,8 @@
     <script src="http://open.mapquestapi.com/sdk/js/v7.2.s/mqa.toolkit.js?key=Fmjtd%7Cluu82q6t21%2C8a%3Do5-94tldz"></script>
 
     <script type="text/javascript">
-        window.filterSkip = 50;
-        window.animSpeed = 100;
+        window.filterSkip = 3;
+        window.animSpeed = 0;
 
         function trip_map() {
 
@@ -61,18 +61,20 @@
             var icon = new MQA.Icon('event.png', 32, 32);
             basic.setIcon(icon);
 
-            basic.setInfoContentHTML('<div style="border-radius:10%;color:#fff;background-color:red;width:100%;position:relative;"><h2>Speeding</h2></div>Time: 11:22 PM');
+            basic.setInfoContentHTML('<section style="border-radius:10%;color:#fff;background-color:red;width:100%;height10px;"><h2>Title</h2></section>Time: 11:22 PM');
             map.addShape(basic);
         };
 
         trip_map.startdraw = function() {
 
-            var currentlocation = -1;
+            window.currentlocation = 0;
 
             MQA.withModule('shapes', function() {
 
-                var last = sampledata.tripResponse.locationUpdate.length - 1;
+
                 var collection = new MQA.ShapeCollection();
+
+                var last = sampledata.tripResponse.locationUpdate.length - 1;
                 var startPoi = new MQA.Poi({
                     lat: sampledata.tripResponse.locationUpdate[0].lat,
                     lng: sampledata.tripResponse.locationUpdate[0].lng
@@ -90,31 +92,62 @@
                 endPoi.setIcon(endIcon);
                 collection.add(endPoi);
 
+                var line = new MQA.LineOverlay();
+                line.borderWidth = 7;
+                line.color = '#157efb';
+
+                collection.add(line);
+                map.addShapeCollection(collection);
+
+
+                //Draw first line for concatinating from next step.
+    
+                line.setShapePoints([sampledata.tripResponse.locationUpdate[currentlocation].lat, sampledata.tripResponse.locationUpdate[currentlocation].lng, sampledata.tripResponse.locationUpdate[currentlocation + filterSkip].lat, sampledata.tripResponse.locationUpdate[currentlocation + filterSkip].lng]);
+                currentlocation += filterSkip;
+
+
+                if(window.DrawInterval!=undefined)clearInterval(DrawInterval);
                 window.DrawInterval = setInterval(function() {
-                    trip_map.drawnext(currentlocation += filterSkip, collection, last)
+                    trip_map.drawnext(currentlocation, line, last)
+
                 }, animSpeed);
 
 
+
+                /*  function draw() {
+                      requestAnimationFrame(draw);
+                      trip_map.drawnext(currentlocation += filterSkip, collection, last);
+                      
+                  }
+                  draw();*/
+
+
+                //Fit to boudary of start and end
                 map.zoomToRect(collection.getBoundingRect());
 
-                map.addShapeCollection(collection);
+                //Pan for avoiding map going behind right box
+                map.panWest(2.5);
+
+
             });
 
         };
 
-        trip_map.drawnext = function(locationIndex, collection, lastIndex) {
+        trip_map.drawnext = function(locationIndex, line, lastIndex) {
 
-            console.log('s')
-            if (locationIndex > lastIndex) {
+
+            if ((locationIndex + filterSkip) > lastIndex) {
                 clearInterval(DrawInterval);
+                currentlocation=0;
             } else {
-                var line = new MQA.LineOverlay();
-                line.setShapePoints([sampledata.tripResponse.locationUpdate[locationIndex].lat, sampledata.tripResponse.locationUpdate[locationIndex].lng, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lat, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lng]);
-                collection.add(line);
+
+
+                line.setShapePoints(line.shapePoints.concat([sampledata.tripResponse.locationUpdate[locationIndex].lat, sampledata.tripResponse.locationUpdate[locationIndex].lng, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lat, sampledata.tripResponse.locationUpdate[locationIndex + filterSkip].lng]));
+                currentlocation += filterSkip;
+
             }
 
         };
-
 
 
         MQA.EventUtil.observe(window, 'load', trip_map);
